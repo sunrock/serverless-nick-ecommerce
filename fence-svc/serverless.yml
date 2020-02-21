@@ -1,0 +1,91 @@
+service: farm-project
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: ap-southeast-2
+  environment:
+    FARM_PROJ_PRODUCT_TABLE: '${self:service}-product-${opt:stage, self:provider.stage}'
+    FARM_PROJ_CATEGORY_TABLE: '${self:service}-category-${opt:stage, self:provider.stage}'
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: '*'
+
+functions:
+  apiTest:
+    handler: api/handler.apiTest
+    events:
+      - http:
+          path: test
+          method: get
+
+  createProduct:
+    handler: api/product.create
+    memorySize: 128
+    description: Create a new product with information.
+    events:
+      - http:
+          path: product/new
+          method: post
+
+  listProducts:
+    handler: api/product.list
+    memorySize: 128
+    description: List all products.
+    events:
+      - http:
+          path: products
+          method: get
+
+  getProduct:
+    handler: api/product.getById
+    memorySize: 128
+    description: Get infomation of a single product.
+    events:
+      - http:
+          path: product/{id}
+          method: get
+
+  editProduct:
+    handler: api/product.update
+    memorySize: 128
+    description: Edit a selecte product.
+    events:
+      - http:
+          path: product/{id}
+          method: put
+
+  deleteProduct:
+    handler: api/product.delete
+    memorySize: 128
+    description: Delete a selected product.
+    events:
+      - http:
+          path: product/{id}
+          method: delete
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    FarmProjProductTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: 'id'
+            AttributeType: 'S'
+        KeySchema:
+          - AttributeName: 'id'
+            KeyType: 'HASH'
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: 'NEW_AND_OLD_IMAGES'
+        TableName: ${self:provider.environment.FARM_PROJ_PRODUCT_TABLE}
